@@ -1,0 +1,351 @@
+# Auteur : Rihab AZMANI 
+# script : scoring _ up genes 
+
+library( clusterProfiler )
+require( org.Mm.eg.db)  #for drug, i use the humain organism ( org.Hs.eg.db)
+keytypes(org.Mm.eg.db)
+library(xlsx)
+## script R annotation genes cible 
+
+setwd("/home/orlab/Desktop/Rihab")
+
+file_list <- list.files(path ="/home/orlab/Desktop/Rihab" , pattern = "*.txt")
+for (toto in 1:length(file_list)){
+  
+  data <- read.delim(file_list[toto] , h <- T  , sep = "\t") 
+  
+  test <- as.character(data$Gene.symbol)
+  eg = bitr(test, fromType <- "SYMBOL", toType <- "ENTREZID", OrgDb <- "org.Mm.eg.db")
+  head(eg)
+  geneList = eg$ENTREZID
+  
+  geneList
+  # # feature 3: ordre décroissant 
+  geneList  = sort( geneList , decreasing = TRUE )
+  gene <- geneList
+  head(gene)
+  
+  gene.df <- bitr(gene, fromType = "ENTREZID",
+                  toType = c("ENSEMBL", "SYMBOL"),
+                  OrgDb = org.Mm.eg.db)
+  head(gene.df)
+  
+  ggo <- groupGO(gene     = gene,
+                 OrgDb    = org.Mm.eg.db,
+                 ont      = "BP",
+                 level    = 3,
+                 readable = TRUE)
+  
+  head(summary(ggo))
+  
+  # barplot(ggo, drop <- TRUE, showCategory <- 12)
+  
+  ego <- enrichGO(gene          = gene,
+                  universe      = names(geneList),
+                  OrgDb         = org.Mm.eg.db,
+                  ont           = "BP",
+                  pAdjustMethod = "BH",
+                  pvalueCutoff  = 0.01,
+                  qvalueCutoff  = 0.05,
+                  readable      = TRUE)
+  head(summary(ego))
+  
+  
+  
+  # plotGOgraph(ego)
+  ress <- ego@result
+  library(tidyverse)
+  library(dplyr)
+  b <- separate(ress, "BgRatio" , c("genee" , "total"), sep = "/")
+  cc <- separate(ress , "GeneRatio" , c("Genes" , "ToTal") , sep = "/")
+  tmp = ((as.numeric(b$genee) / as.numeric(b$total)) * 100)
+  upload_expeted = (tmp*as.numeric(cc$ToTal))/100 
+  ress <- cbind(ress,upload_expeted)
+  fold_enrichment = ress$Count/ress$upload_expeted
+  ress <- cbind(ress, fold_enrichment)
+  ## Scoring 
+  
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    x <- grep("(.*regulation)(.*negative)(.*oligodendrocyte)|(.*negative)(.*regulation)(.*oligodendrocyte)" , ress$Description, ignore.case = TRUE)
+    score = -3*ress$fold_enrichment[x]
+    b <- ress[x,]
+    print(score) 
+    table9 = cbind(b , score )
+    break 
+  }
+  
+  
+  n = as.character(ress$Description)
+  score = NULL
+  for (i in n) { 
+    ll <- grep("(.*negative)(.*gliogenesis)|(.*gliogenesis)(.*negative)", ress$Description , ignore.case = T )
+    nnn = ress[ll,]
+    score = -2*ress$fold_enrichment[ll]
+    table10 = cbind(nnn , score)
+    print(score) 
+    break
+    
+  }
+  
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    m <- grep( "(.*positive)(.*neuron)|(.*neuron)(.*positive)", ress$Description, ignore.case = TRUE)
+    ll = ress[m,]
+    score = -1*ress$fold_enrichment[m]
+    table11 = cbind(ll , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    x <- grep( "(.*development)(.*neuron)|(.*neuron)(.*development)", ress$Description, ignore.case = TRUE)
+    y= ress[x,]
+    score = -1*ress$fold_enrichment[x]
+    table12 = cbind(y , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    x <- grep( "(.*differentiation)(.*neuron)|(.*neuron)(.*differentiation)", ress$Description, ignore.case = TRUE)
+    y= ress[x,]
+    score = -1*ress$fold_enrichment[x]
+    table13 = cbind(y , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    mm<- grep( "(.*fate)(.*neuron)|(.*neuron)(.*fate)", ress$Description, ignore.case = TRUE)
+    l = ress[mm,]
+    score = -1*ress$fold_enrichment[mm]
+    table14 = cbind(l , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    l <- grep( "(.*myelin)(.*negative)|(.*negative)(.*myelin)", ress$Description, ignore.case = TRUE)
+    nn = ress[l,]
+    score = -2*ress$fold_enrichment[l]
+    table15 = cbind(nn , score)
+    print(score) 
+    break
+    
+  }
+  
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    s <- grep( "(.*positive)(.*apoptotic)|(.*apoptotic)(.*positive)", ress$Description, ignore.case = TRUE)
+    bb = ress[s,]
+    score = -2*ress$fold_enrichment[s]
+    table16 = cbind(bb , score)
+    print(score) 
+    break
+    
+  }
+  
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    s <- grep( "(.*oligodendrocyte)(.*apoptotic)|(.*apoptotic)(.*oligendrocyte)", ress$Description, ignore.case = TRUE)
+    bb = ress[s,]
+    score = -3*ress$fold_enrichment[s]
+    table17= cbind(bb , score)
+    print(score) 
+    break
+    
+  }
+  ### table complete 
+  up <- rbind( table9, table10, table11 , table12, table13, table14, table15, table16 , table17 )
+  score_sum = apply(up[12] , 2 , sum)
+  if (nrow(up) > 0) { Table=cbind(up , score_sum); write.csv(Table,file=paste("down_drug" , toto ,".csv"));} else {Table = up[,-c(1:12)];}
+  
+}
+
+# down genes 
+
+library( clusterProfiler )
+require( org.Mm.eg.db) ## for drug, i use the humain organism ( org.Hs.eg.db)
+keytypes(org.Mm.eg.db)
+
+## script R gene annotation
+
+setwd("/home/orlab/Desktop/Rihab")
+
+file_list <- list.files(path ="/home/orlab/Desktop/Rihab" , pattern = "*.txt")
+for (toto in 1:length(file_list)){
+  
+  data <- read.delim(file_list[toto] , h <- T  , sep = "\t") 
+  
+  test <- as.character(data$Gene.symbol)
+  eg = bitr(test, fromType <- "SYMBOL", toType <- "ENTREZID", OrgDb <- "org.Mm.eg.db")
+  head(eg)
+  geneList = eg$ENTREZID
+  
+  geneList
+  # # feature 3: ordre décroissant 
+  geneList  = sort( geneList , decreasing = TRUE )
+  gene <- geneList
+  head(gene)
+  
+  gene.df <- bitr(gene, fromType = "ENTREZID",
+                  toType = c("ENSEMBL", "SYMBOL"),
+                  OrgDb = org.Mm.eg.db)
+  head(gene.df)
+  
+  ggo <- groupGO(gene     = gene,
+                 OrgDb    = org.Mm.eg.db,
+                 ont      = "BP",
+                 level    = 3,
+                 readable = TRUE)
+  
+  head(summary(ggo))
+  
+  # barplot(ggo, drop <- TRUE, showCategory <- 12)
+  
+  ego <- enrichGO(gene          = gene,
+                  universe      = names(geneList),
+                  OrgDb         = org.Mm.eg.db,
+                  ont           = "BP",
+                  pAdjustMethod = "BH",
+                  pvalueCutoff  = 0.01,
+                  qvalueCutoff  = 0.05,
+                  readable      = TRUE)
+  head(summary(ego))
+  
+  
+  
+  # plotGOgraph(ego)
+  ress <- ego@result
+  library(tidyverse)
+  library(dplyr)
+  b <- separate(ress, "BgRatio" , c("genee" , "total"), sep = "/")
+  cc <- separate(ress , "GeneRatio" , c("Genes" , "ToTal") , sep = "/")
+  tmp = ((as.numeric(b$genee) / as.numeric(b$total)) * 100)
+  upload_expeted = (tmp*as.numeric(cc$ToTal))/100 
+  ress <- cbind(ress,upload_expeted)
+  fold_enrichment = ress$Count/ress$upload_expeted
+  ress <- cbind(ress, fold_enrichment)
+  ## Scoring n = ress$Description
+  score = NULL
+  for (i in n) { 
+    x <- grep("(.*regulation)(.*negative)(.*oligodendrocyte)|(.*negative)(.*regulation)(.*oligodendrocyte)" , ress$Description, ignore.case = TRUE)
+    score = -3*ress$fold_enrichment[x]
+    b <- ress[x,]
+    print(score) 
+    table1 = cbind(b , score )
+    break 
+  }
+  
+  
+  n = as.character(ress$Description)
+  score = NULL
+  for (i in n) { 
+    ll <- grep("(.*negative)(.*gliogenesis)|(.*gliogenesis)(.*negative)", ress$Description , ignore.case = T )
+    nnn = ress[ll,]
+    score = -2*ress$fold_enrichment[ll]
+    table2 = cbind(nnn , score)
+    print(score) 
+    break
+    
+  }
+  
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    m <- grep( "(.*positive)(.*neuron)|(.*neuron)(.*positive)", ress$Description, ignore.case = TRUE)
+    ll = ress[m,]
+    score = -1*ress$fold_enrichment[m]
+    table3 = cbind(ll , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    x <- grep( "(.*development)(.*neuron)|(.*neuron)(.*development)", ress$Description, ignore.case = TRUE)
+    y= ress[x,]
+    score = -1*ress$fold_enrichment[x]
+    table4 = cbind(y , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    x <- grep( "(.*differentiation)(.*neuron)|(.*neuron)(.*differentiation)", ress$Description, ignore.case = TRUE)
+    y= ress[x,]
+    score = -1*ress$fold_enrichment[x]
+    table5= cbind(y , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    mm<- grep( "(.*fate)(.*neuron)|(.*neuron)(.*fate)", ress$Description, ignore.case = TRUE)
+    l = ress[mm,]
+    score = -1*ress$fold_enrichment[mm]
+    table6 = cbind(l , score)
+    print(score) 
+    break
+    
+  }
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    l <- grep( "(.*myelin)(.*negative)|(.*negative)(.*myelin)", ress$Description, ignore.case = TRUE)
+    nn = ress[l,]
+    score = -2*ress$fold_enrichment[l]
+    table7 = cbind(nn , score)
+    print(score) 
+    break
+    
+  }
+  
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    s <- grep( "(.*positive)(.*apoptotic)|(.*apoptotic)(.*positive)", ress$Description, ignore.case = TRUE)
+    bb = ress[s,]
+    score = -2*ress$fold_enrichment[s]
+    table8 = cbind(bb , score)
+    print(score) 
+    break
+    
+  }
+  
+  n = ress$Description
+  score = NULL
+  for (i in n) { 
+    s <- grep( "(.*oligodendrocyte)(.*apoptotic)|(.*apoptotic)(.*oligendrocyte)", ress$Description, ignore.case = TRUE)
+    bb = ress[s,]
+    score = -3*ress$fold_enrichment[s]
+    table9= cbind(bb , score)
+    print(score) 
+    break
+    
+  }
+  ### table complete 
+  down<- rbind(table1, table2 , table3 , table4 , table5 , table6 ,table7 , table8 , table9 )
+  score_sum = apply(abs(down[12]) , 2 , sum)
+  if (nrow(down) > 0) { Table=cbind(down , score_sum); write.csv(Table,file=paste("down_drug" , toto ,".csv"));} else {Table = down[,-c(1:12)];}
+  
+}
+
